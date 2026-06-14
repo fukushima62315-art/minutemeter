@@ -9,6 +9,10 @@ already burns — so that shared minute pool drains faster and overages creep in
 most teams have **no per-job visibility** into Actions **cost**, **billing**, or **spend**.
 MinuteMeter runs inside your CI — no external dashboard, no sign-up, no data leaves GitHub.
 
+**[Marketplace](https://github.com/marketplace/actions/minutemeter-actions-cost)** ·
+**[Landing page](https://fukushima62315-art.github.io/minutemeter-site/)** ·
+keywords: GitHub Actions cost, Actions minutes, CI billing, spend, budget
+
 ## Quick start
 
 Add a workflow that runs after your CI completes:
