@@ -1,24 +1,27 @@
 # MinuteMeter — GitHub Actions cost per job, on every PR
 
-**See what your GitHub Actions runs actually cost.** MinuteMeter attributes a USD
-cost to **each job** in a workflow run and posts the breakdown as a PR comment and
-job summary — so you catch expensive jobs *before* the bill arrives.
+See what your GitHub Actions runs actually cost. MinuteMeter attributes a USD cost to each job in a workflow run and posts the breakdown as a PR comment and job summary.
 
-Since **June 1, 2026, Copilot code review consumes the same Actions minutes** your CI
-already burns — so that shared minute pool drains faster and overages creep in, while
-most teams have **no per-job visibility** into Actions **cost**, **billing**, or **spend**.
-MinuteMeter runs inside your CI — no external dashboard, no sign-up, no data leaves GitHub.
+## Key features
 
-**[Marketplace](https://github.com/marketplace/actions/minutemeter-actions-cost)** ·
-**[Landing page](https://fukushima62315-art.github.io/minutemeter-site/)** ·
-keywords: GitHub Actions cost, Actions minutes, CI billing, spend, budget
+- **Per-job cost attribution**: Breaks down workflow run costs by job, detecting runner type (Linux, Windows, macOS, self-hosted) and core count automatically.
+- **Budget alerts**: Flags runs when total cost exceeds a configurable USD threshold.
+- **PR comments and job summaries**: Posts cost breakdown directly to PRs and workflow summaries—no external dashboard or sign-up required.
+- **Billing-accurate**: Computes cost as per-job duration × runner list price, billed per started minute (rounded up), matching GitHub's billing model.
+- **Zero external data**: Runs inside your CI; no data leaves GitHub.
+- **Graceful degradation**: Never fails your CI; API or permission errors downgrade to warnings.
 
-## Quick start
+## Technology stack
 
-Add a workflow that runs after your CI completes:
+- **Language**: Python 3 (stdlib only, no external dependencies)
+- **Delivery**: GitHub Actions
+- **APIs**: GitHub REST API (actions, pull-requests endpoints)
+
+## Installation / setup
+
+Add a workflow file (e.g., `.github/workflows/minutemeter.yml`) to your repository:
 
 ```yaml
-# .github/workflows/minutemeter.yml
 name: MinuteMeter
 on:
   workflow_run:
@@ -38,45 +41,48 @@ jobs:
           budget_usd: "1.00"   # optional: flag runs over $1.00
 ```
 
-That's it. On the next run you'll get a comment like:
+**Required permissions:**
+- `actions:read` — to read workflow run and job timing
+- `pull-requests:write` — to comment the cost breakdown on PRs
 
-> ### 💸 MinuteMeter — GitHub Actions cost
-> **Run total: $0.4820** (impactful jobs first) · 🔴 OVER budget $1.00? no
->
-> | Job | Runner | Min | $ |
-> |---|---|--:|--:|
-> | integration (macos) | macos | 7 | $0.4340 |
-> | build | linux | 8 | $0.0480 |
-> | lint | linux | 1 | $0.0060 |
-
-## Inputs
+**Inputs:**
 
 | Input | Default | Description |
 |---|---|---|
-| `github_token` | `${{ github.token }}` | Needs `actions:read` + `pull-requests:write`. |
-| `budget_usd` | — | Flag the run when its cost exceeds this. |
-| `run_id` | triggering run | Workflow run to analyze. |
-| `pr_number` | auto | PR to comment on (auto-detected from the event). |
+| `github_token` | `${{ github.token }}` | GitHub API token with required scopes. |
+| `budget_usd` | (none) | Optional: flag the run when its cost exceeds this USD amount. |
+| `run_id` | triggering run | Workflow run ID to analyze (auto-detected from event). |
+| `pr_number` | auto | PR number to comment on (auto-detected from the event). |
 
-## How costs are computed
+## Usage
 
-- Per-job duration × the runner's **list price per minute**, billed **per started
-  minute** (rounded up), matching GitHub's billing model.
-- Runner type is detected from job labels (`ubuntu-latest`, `windows-latest`,
-  `macos-latest`, `self-hosted`, larger `*-N-cores` runners).
-- Rates are GitHub's published list prices (Linux $0.006, Windows $0.010,
-  macOS $0.062 per minute). Self-hosted runners are shown **free** — GitHub
-  announced a $0.002/min self-hosted charge in Dec 2025 but shelved it. Figures
-  are **gross of included free minutes** — list cost, not your post-allowance invoice.
+Once the workflow is configured, MinuteMeter runs automatically after your CI completes. On each run, you will receive a PR comment like:
 
-MinuteMeter never fails your CI: API or permission errors degrade to a warning.
+```
+### 💸 MinuteMeter — GitHub Actions cost
+**Run total: $0.4820** (impactful jobs first) · 🔴 OVER budget $1.00? no
 
-## Free vs Pro
+| Job | Runner | Min | $ |
+|---|---|--:|--:|
+| integration (macos) | macos | 7 | $0.4340 |
+| build | linux | 8 | $0.0480 |
+| lint | linux | 1 | $0.0060 |
+```
 
-- **Free (this Action, MIT):** per-run, per-job cost on every PR + budget flag.
-- **Pro / Team:** org-wide rollups, monthly budget tracking & alerts (Slack/Discord),
-  cost history, and optimization suggestions. *(coming soon)*
+**Cost calculation:**
+- Per-job duration is multiplied by the runner's list price per minute.
+- Billing rounds up to the nearest started minute.
+- Runner type is detected from job labels (`ubuntu-latest`, `windows-latest`, `macos-latest`, self-hosted, or larger runners like `ubuntu-latest-8-cores`).
+- **Rates (USD/minute)**: Linux $0.006, Windows $0.010, macOS $0.062, self-hosted currently $0.000 (the announced $0.002/min charge was shelved).
 
-## License
+## Directory structure
 
-MIT © MinuteMeter
+```
+.
+├── README.md                    # Project overview and quick start
+├── src/
+│   ├── minutemeter.py          # Main cost computation and API integration
+│   └── rates.py                # GitHub Actions per-minute runner rates (USD)
+└── tests/
+    └── test_cost_engine.py     # Unit tests for cost computation
+```
